@@ -1,13 +1,17 @@
 # aktionariat-client
 
-Tests the Aktionariat KYC-client status API from the partner side.
+Partner tests and API notes for DFX RealUnit / Aktionariat.
+
+**How to get a JWT and how to call each RealUnit / KYC-client endpoint:** see **[docs/API.md](docs/API.md)**.
+
+This repo does not implement a KYC-start client.
 
 Endpoints under test:
 
 - `GET /v2/kyc/client/aktionariat/users`
 - `GET /v2/kyc/client/aktionariat/users/:address`
 
-Auth is a KYC-client company JWT (Bearer). This repo does not implement a KYC-start client.
+Auth is a KYC-client company JWT (Bearer).
 
 ## Setup
 
