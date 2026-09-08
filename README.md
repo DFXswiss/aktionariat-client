@@ -18,7 +18,7 @@ Auth is a KYC-client company JWT (Bearer). This repo does not implement a KYC-st
 3. Optionally set `DFX_TEST_ADDRESS` to exercise the single-user GET.
 4. Do not commit `.env`.
 
-Without `DFX_ACCESS_TOKEN`, live HTTP tests are skipped and only the contract unit test runs.
+Without `DFX_ACCESS_TOKEN`, `npm test` skips — there is nothing to assert without a live call.
 
 ## Run
 

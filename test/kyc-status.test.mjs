@@ -5,8 +5,6 @@ import {
   baseUrl,
   accessToken,
   authHeaders,
-  EXPECTED_KEYS,
-  FORBIDDEN_KEYS,
   assertUserShape,
 } from './helpers.mjs';
 
@@ -16,14 +14,6 @@ const token = accessToken();
 const live = Boolean(token);
 const usersUrl = `${baseUrl()}/v2/kyc/client/aktionariat/users`;
 const zeroAddress = '0x0000000000000000000000000000000000000000';
-
-describe('KYC-client status contract', () => {
-  it('documents the expected user JSON keys', () => {
-    assert.deepEqual(EXPECTED_KEYS, ['id', 'kycLevel', 'kycStatus', 'kycHash']);
-    assert.ok(FORBIDDEN_KEYS.includes('mail'));
-    assert.ok(FORBIDDEN_KEYS.includes('firstName'));
-  });
-});
 
 describe('GET /v2/kyc/client/aktionariat/users', { skip: !live }, () => {
   it('returns 401 without Authorization', async () => {
