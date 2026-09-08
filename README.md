@@ -11,13 +11,13 @@ Endpoints under test:
 - `GET /v2/kyc/client/aktionariat/users`
 - `GET /v2/kyc/client/aktionariat/users/:address`
 
-Auth is a KYC-client company JWT (Bearer).
+Auth is a normal user JWT (Bearer). The address must be on `AKTIONARIAT_KYC_READER_ADDRESSES`.
 
 ## Setup
 
 1. Copy `.env.example` to `.env`.
-2. Set `DFX_ACCESS_TOKEN` from a KYC-client company sign-in:
-   - `GET /v1/auth/challenge?address=...`
+2. Set `DFX_ACCESS_TOKEN` from a **user** sign-in of an allowlisted address:
+   - `GET /v1/auth/signMessage?address=...`
    - `POST /v1/auth/signIn`
 3. Optionally set `DFX_TEST_ADDRESS` to exercise the single-user GET.
 4. Do not commit `.env`.

@@ -36,7 +36,9 @@ The company wallet must already exist in DFX (it is provisioned, not created by 
 
 ### 1.1 Company JWT (KYC client)
 
-Use this for every `/v2/kyc/client/...` call.
+Use this for the **legacy** full KYC-client dump (`GET /v2/kyc/client/users`, documents, payments). Prod has not used it successfully in the last 30 days.
+
+The Aktionariat **status** GETs in this repo do **not** use Company JWT. They use a normal **User JWT** (§1.2) whose address is on `AKTIONARIAT_KYC_READER_ADDRESSES`.
 
 **Step A — challenge** (must be an existing company wallet address):
 
@@ -133,22 +135,20 @@ A company token on a user-only route (or the reverse) is `403`.
 
 ## 2. Partner KYC-client endpoints
 
-Role required: **`KycClientCompany`** (company JWT from §1.1).
-
-These routes are scoped to **users of that company wallet**. Another company’s users are not returned. IDs in paths are **wallet addresses**.
-
 ### 2.1 Aktionariat status surface (thin)
 
 These are the two GETs this repo tests. They return **only** status fields — no mail, name, address, phone, or trading limit.
 
-Wallet name on the JWT must be `Aktionariat`. Any other KYC-client wallet gets `403 Wallet is not Aktionariat`.
+**Auth:** normal **User JWT** (§1.2). The caller’s address (`jwt.address`) must be listed in `AKTIONARIAT_KYC_READER_ADDRESSES` (comma-separated, case-insensitive). Anyone else gets `403 Address is not allowlisted`. Empty env = nobody.
+
+The payload is the users of the DFX wallet named `Aktionariat`, not the caller’s own KYC.
 
 | Method | Path | Auth | Success | Notes |
 |--------|------|------|---------|--------|
-| GET | `/v2/kyc/client/aktionariat/users` | Company JWT | `200` array | All users of the Aktionariat wallet |
-| GET | `/v2/kyc/client/aktionariat/users/:address` | Company JWT | `200` object | One user; `404` if the address is not a user of this wallet |
+| GET | `/v2/kyc/client/aktionariat/users` | User JWT + allowlist | `200` array | All users of the Aktionariat wallet |
+| GET | `/v2/kyc/client/aktionariat/users/:address` | User JWT + allowlist | `200` object | One user; `404` if the address is not a user of that wallet |
 
-Without `Authorization`: `401`. Wrong role: `403`.
+Without `Authorization`: `401`. Role not `User` (or super-role): `403`. Inactive account: `403`.
 
 **Item shape** (`AktionariatKycStatusDto`):
 
@@ -160,7 +160,7 @@ Without `Authorization`: `401`. Wrong role: `403`.
 | `kycHash` | string | KYC hash |
 
 ```bash
-TOKEN=...   # company JWT
+TOKEN=...   # user JWT of an allowlisted address
 curl -sS -H "Authorization: Bearer $TOKEN" \
   https://api.dfx.swiss/v2/kyc/client/aktionariat/users
 
