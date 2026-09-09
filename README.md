@@ -6,12 +6,12 @@ Partner tests and API notes for DFX RealUnit / Aktionariat.
 
 This repo does not implement a KYC-start client.
 
-Endpoints under test:
+Endpoints under test (ship with [DFXswiss/backend#5429](https://github.com/DFXswiss/backend/pull/5429); not on production `develop` until that merges):
 
 - `GET /v2/kyc/client/aktionariat/users`
 - `GET /v2/kyc/client/aktionariat/users/:address`
 
-Auth is a normal user JWT (Bearer). The address must be on `AKTIONARIAT_KYC_READER_ADDRESSES`.
+Auth is a normal **user** JWT (Bearer). The caller address must be on the API env `AKTIONARIAT_KYC_READER_ADDRESSES`. Company JWT is not accepted.
 
 ## Setup
 

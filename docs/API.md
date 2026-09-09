@@ -29,16 +29,16 @@ There are two login kinds. They use the same `POST /v1/auth/signIn`, but **diffe
 
 | Kind | When | How the server decides | JWT `role` | Default lifetime |
 |------|------|------------------------|------------|------------------|
-| **Company** | Partner backend (this repo, KYC-client GETs) | A challenge was fetched for this address and is still valid | `KycClientCompany` if the wallet is a KYC client, otherwise `ClientCompany` | **10 minutes** (`JWT_EXPIRES_IN_COMPANY`) |
-| **User** | End-customer RealUnit flows (buy, sell, register, PDFs, referral) | No live challenge for this address | `User` (or the user’s stored role) | **2 days** (`JWT_EXPIRES_IN`) |
+| **User** | Aktionariat status GETs in this repo, and RealUnit buy/sell/register/PDFs/referral | No live challenge for this address | `User` (or a super-role of `User`) | **2 days** (`JWT_EXPIRES_IN`) |
+| **Company** | Legacy full KYC-client dump only (`GET /v2/kyc/client/users`, documents, payments). **Not** used by this repo | A challenge was fetched for this address and is still valid | `KycClientCompany` if the wallet is a KYC client, otherwise `ClientCompany` | **10 minutes** (`JWT_EXPIRES_IN_COMPANY`) |
 
 The company wallet must already exist in DFX (it is provisioned, not created by `signIn`). `GET /v1/auth/challenge` returns `400 Wallet not found/invalid` if the address is unknown.
 
-### 1.1 Company JWT (KYC client)
+### 1.1 Company JWT (legacy KYC-client dump)
 
-Use this for the **legacy** full KYC-client dump (`GET /v2/kyc/client/users`, documents, payments). Prod has not used it successfully in the last 30 days.
+Do **not** use this for the Aktionariat status GETs. Those use a normal **User JWT** (§1.2).
 
-The Aktionariat **status** GETs in this repo do **not** use Company JWT. They use a normal **User JWT** (§1.2) whose address is on `AKTIONARIAT_KYC_READER_ADDRESSES`.
+Company JWT is only for the old full dump (`GET /v2/kyc/client/users`, documents, payments).
 
 **Step A — challenge** (must be an existing company wallet address):
 
@@ -89,7 +89,7 @@ curl -sS -X POST "$BASE/v1/auth/signIn" \
   -d "{\"address\":\"$ADDR\",\"signature\":\"$SIGN\"}"
 ```
 
-Put `accessToken` in `.env` as `DFX_ACCESS_TOKEN` for `npm test`. Refresh it when it expires (~10 minutes).
+Do not put this token in `.env` for `npm test`. Tests need a **user** JWT (§1.2).
 
 Errors:
 
@@ -99,9 +99,11 @@ Errors:
 | 401 `Challenge invalid` | No challenge, or older than 10 seconds |
 | 401 `Invalid credentials` | Signature does not match the challenge |
 
-### 1.2 User JWT (RealUnit customer)
+### 1.2 User JWT (partner status GETs and RealUnit customer)
 
-Use this for `/v1/realunit/buy`, `sell`, `register`, PDFs, legal accept, referral, etc.
+This is the login for **this repo**. Also used for `/v1/realunit/buy`, `sell`, `register`, PDFs, legal accept, referral.
+
+The signer must already be a DFX **user** (`404 User not found` otherwise). First-time: `POST /v1/auth/signUp`. The same address must later be listed on the API host as `AKTIONARIAT_KYC_READER_ADDRESSES` (server env, not this repo).
 
 **Step A — message to sign**:
 
@@ -118,7 +120,7 @@ GET /v1/auth/signMessage?address=0xCustomerWallet
 
 On non-production the message is prefixed with `[dev]_` or `[loc]_`.
 
-**Step B — `POST /v1/auth/signIn`** with `{ "address", "signature" }` (optional `key`, `blockchain` for contract wallets). The user must already exist (`404 User not found` otherwise). First-time users use `POST /v1/auth/signUp` with the same signature plus optional `wallet` (wallet name, e.g. branding).
+**Step B — `POST /v1/auth/signIn`** with `{ "address", "signature" }` (optional `key`, `blockchain` for contract wallets). New users: `POST /v1/auth/signUp` with the same signature plus optional `wallet` (branding name).
 
 **Do not** call `/v1/auth/challenge` before a user `signIn`. A leftover valid challenge on that address would route the call through company login.
 
@@ -137,18 +139,22 @@ A company token on a user-only route (or the reverse) is `403`.
 
 ### 2.1 Aktionariat status surface (thin)
 
-These are the two GETs this repo tests. They return **only** status fields — no mail, name, address, phone, or trading limit.
+These two GETs are the partner status API this repo tests. They are **not on production `develop` yet** — they ship with [DFXswiss/backend#5429](https://github.com/DFXswiss/backend/pull/5429). Until that merges, `https://api.dfx.swiss/v2/kyc/client/aktionariat/users` does not exist.
 
-**Auth:** normal **User JWT** (§1.2). The caller’s address (`jwt.address`) must be listed in `AKTIONARIAT_KYC_READER_ADDRESSES` (comma-separated, case-insensitive). Anyone else gets `403 Address is not allowlisted`. Empty env = nobody.
+They return **only** status fields — no mail, name, street, phone, or trading limit.
+
+**Auth:** normal **User JWT** (§1.2). Guards: `AuthGuard` + `RoleGuard(User)` + `UserActiveGuard`. Company JWT (`KycClientCompany`) is **not** accepted.
+
+The caller’s address (`jwt.address`) must be listed in the API env `AKTIONARIAT_KYC_READER_ADDRESSES` (comma-separated, compared case-insensitively). Anyone else gets `403 Address is not allowlisted`. Empty env = nobody. Inactive / blocked account → `403`.
 
 The payload is the users of the DFX wallet named `Aktionariat`, not the caller’s own KYC.
 
 | Method | Path | Auth | Success | Notes |
 |--------|------|------|---------|--------|
 | GET | `/v2/kyc/client/aktionariat/users` | User JWT + allowlist | `200` array | All users of the Aktionariat wallet |
-| GET | `/v2/kyc/client/aktionariat/users/:address` | User JWT + allowlist | `200` object | One user; `404` if the address is not a user of that wallet |
+| GET | `/v2/kyc/client/aktionariat/users/:address` | User JWT + allowlist | `200` object | One user; `404` if that address is not an Aktionariat-wallet user (case-insensitive) |
 
-Without `Authorization`: `401`. Role not `User` (or super-role): `403`. Inactive account: `403`.
+Without `Authorization`: `401`.
 
 **Item shape** (`AktionariatKycStatusDto`):
 
@@ -170,9 +176,9 @@ curl -sS -H "Authorization: Bearer $TOKEN" \
 
 There is **no** partner endpoint that starts KYC or returns a Sumsub redirect. New customers complete KYC on the DFX / RealUnit hosted flow after legal consent. Status is read afterwards with the GETs above.
 
-### 2.2 Full KYC-client dump (same JWT, more fields)
+### 2.2 Full KYC-client dump (Company JWT, more fields)
 
-Same company JWT. These return the full `KycClientDataDto` (PII). Prefer §2.1 for the Aktionariat investor page.
+**Different auth** from §2.1: Company JWT (§1.1), role `KycClientCompany`. These return the full `KycClientDataDto` (PII). Prefer §2.1 for the Aktionariat investor page.
 
 | Method | Path | Auth | Returns |
 |--------|------|------|---------|
@@ -345,7 +351,7 @@ Role `RealUnit` (operations). Hidden from public Swagger (`@ApiExcludeEndpoint`)
 
 ```bash
 cp .env.example .env
-# DFX_ACCESS_TOKEN = company JWT from §1.1
+# DFX_ACCESS_TOKEN = user JWT from §1.2 of an allowlisted address
 # optional DFX_TEST_ADDRESS = one customer address for GET .../users/:address
 npm test
 ```
