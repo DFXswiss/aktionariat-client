@@ -4,6 +4,9 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
+/** Issuer tenant. Every DFX call in this repo uses this exact string. */
+export const ISSUER = 'RealUnit';
+
 /** Load .env into process.env for keys that are not already set. Missing file is fine. */
 export function loadEnv() {
   const path = resolve(root, '.env');
@@ -43,9 +46,16 @@ export function authHeaders(token = accessToken()) {
   };
 }
 
+export function usersUrl(address) {
+  const rootPath = `${baseUrl()}/v2/kyc/client/aktionariat/users`;
+  const path = address
+    ? `${rootPath}/${encodeURIComponent(address)}`
+    : rootPath;
+  return `${path}?wallet=${encodeURIComponent(ISSUER)}`;
+}
+
 export const EXPECTED_KEYS = ['id', 'kycLevel', 'kycStatus', 'kycHash'];
 
-/** Fields that must not appear on the thin KYC-client status surface. */
 export const FORBIDDEN_KEYS = [
   'mail',
   'firstName',

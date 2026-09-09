@@ -5,6 +5,7 @@ import {
   baseUrl,
   accessToken,
   authHeaders,
+  usersUrl,
   assertUserShape,
 } from './helpers.mjs';
 
@@ -12,19 +13,23 @@ loadEnv();
 
 const token = accessToken();
 const live = Boolean(token);
-const usersUrl = `${baseUrl()}/v2/kyc/client/aktionariat/users?wallet=RealUnit`;
 const zeroAddress = '0x0000000000000000000000000000000000000000';
 
-describe('GET /v2/kyc/client/aktionariat/users', { skip: !live }, () => {
+describe('GET /v2/kyc/client/aktionariat/users?wallet=RealUnit', { skip: !live }, () => {
   it('returns 401 without Authorization', async () => {
-    const res = await fetch(usersUrl, {
-      headers: { Accept: 'application/json' },
-    });
+    const res = await fetch(usersUrl(), { headers: { Accept: 'application/json' } });
     assert.equal(res.status, 401);
   });
 
-  it('lists users with the thin status shape', async () => {
-    const res = await fetch(usersUrl, { headers: authHeaders() });
+  it('returns 400 when wallet is omitted', async () => {
+    const res = await fetch(`${baseUrl()}/v2/kyc/client/aktionariat/users`, {
+      headers: authHeaders(),
+    });
+    assert.equal(res.status, 400);
+  });
+
+  it('lists users with the status shape', async () => {
+    const res = await fetch(usersUrl(), { headers: authHeaders() });
     if (res.status === 401 || res.status === 403) {
       assert.fail(`auth rejected with ${res.status}`);
     }
@@ -37,33 +42,26 @@ describe('GET /v2/kyc/client/aktionariat/users', { skip: !live }, () => {
   });
 
   it('returns 404 for the zero address', async () => {
-    const res = await fetch(`${baseUrl()}/v2/kyc/client/aktionariat/users/${zeroAddress}?wallet=RealUnit`, {
-      headers: authHeaders(),
-    });
+    const res = await fetch(usersUrl(zeroAddress), { headers: authHeaders() });
     assert.equal(res.status, 404);
   });
 });
 
-describe('GET /v2/kyc/client/aktionariat/users/:address', {
+describe('GET /v2/kyc/client/aktionariat/users/:address?wallet=RealUnit', {
   skip: !live || !process.env.DFX_TEST_ADDRESS?.trim(),
 }, () => {
   it('returns 200 with matching id or 404', async () => {
     const address = process.env.DFX_TEST_ADDRESS.trim();
-    const res = await fetch(
-      `${baseUrl()}/v2/kyc/client/aktionariat/users/${encodeURIComponent(address)}?wallet=RealUnit`,
-      {
-      headers: authHeaders(),
-    });
+    const res = await fetch(usersUrl(address), { headers: authHeaders() });
     if (res.status === 401 || res.status === 403) {
       assert.fail(`auth rejected with ${res.status}`);
     }
     if (res.status === 404) {
-      assert.equal(res.status, 404);
       return;
     }
     assert.equal(res.status, 200);
     const user = await res.json();
     assertUserShape(user);
-    assert.equal(user.id, address);
+    assert.equal(user.id.toLowerCase(), address.toLowerCase());
   });
 });

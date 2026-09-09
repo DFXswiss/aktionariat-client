@@ -1,38 +1,27 @@
 # aktionariat-client
 
-DFX API notes and tests for **Aktionariat**. RealUnit is one issuer on that platform.
+Partner documentation and live checks for **Aktionariat → DFX**.
 
-**Every DFX call must pass `RealUnit` as the issuer** (`wallet` in JSON or `?wallet=RealUnit`). See **[docs/API.md](docs/API.md)**.
+RealUnit is one issuer. **Every DFX call that names an issuer must send `RealUnit`.** Full contract: **[docs/API.md](docs/API.md)**.
 
-This repo does not start KYC. It only reads status.
+This repository does not start KYC. It only documents and tests **status reads**.
 
-Endpoints (ship with [DFXswiss/backend#5429](https://github.com/DFXswiss/backend/pull/5429); not on production `develop` until that merges):
+```
+GET /v2/kyc/client/aktionariat/users?wallet=RealUnit
+GET /v2/kyc/client/aktionariat/users/:address?wallet=RealUnit
+```
 
-- `GET /v2/kyc/client/aktionariat/users?wallet=RealUnit`
-- `GET /v2/kyc/client/aktionariat/users/:address?wallet=RealUnit`
+Those routes ship with [DFXswiss/backend#5429](https://github.com/DFXswiss/backend/pull/5429) and are not on production until that merges.
 
-Auth: user JWT of an address on `AKTIONARIAT_KYC_READER_ADDRESSES`. Login body must include `"wallet": "RealUnit"`.
+Auth is a **user** JWT. Login JSON must include `"wallet": "RealUnit"`. The operator address must be on DFX env `AKTIONARIAT_KYC_READER_ADDRESSES`.
 
-## Setup
-
-1. Copy `.env.example` to `.env`.
-2. `GET /v1/auth/signMessage?address=...` then `POST /v1/auth/signIn` with `"wallet": "RealUnit"`. Put the token in `DFX_ACCESS_TOKEN`.
-3. Optionally set `DFX_TEST_ADDRESS`.
-4. Do not commit `.env`.
-
-Without `DFX_ACCESS_TOKEN`, `npm test` skips.
+## Tests
 
 ```bash
+cp .env.example .env
+# DFX_ACCESS_TOKEN from POST /v1/auth/signIn with "wallet": "RealUnit"
+# optional DFX_TEST_ADDRESS
 npm test
 ```
 
-Requires Node.js 20+.
-
-## Response fields
-
-| Field       | Meaning        |
-|-------------|----------------|
-| `id`        | Wallet address |
-| `kycLevel`  | KYC level      |
-| `kycStatus` | KYC status     |
-| `kycHash`   | KYC hash       |
+Node.js 20+. Do not commit `.env`. Without a token, tests skip.
