@@ -4,10 +4,10 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-/** Issuer tenant. Every DFX call in this repo uses this exact string. */
 export const ISSUER = 'RealUnit';
 
-/** Load .env into process.env for keys that are not already set. Missing file is fine. */
+export const STATES = ['notStarted', 'noConsent', 'ok'];
+
 export function loadEnv() {
   const path = resolve(root, '.env');
   if (!existsSync(path)) return;
@@ -48,13 +48,11 @@ export function authHeaders(token = accessToken()) {
 
 export function usersUrl(address) {
   const rootPath = `${baseUrl()}/v2/kyc/client/aktionariat/users`;
-  const path = address
-    ? `${rootPath}/${encodeURIComponent(address)}`
-    : rootPath;
+  const path = address ? `${rootPath}/${encodeURIComponent(address)}` : rootPath;
   return `${path}?wallet=${encodeURIComponent(ISSUER)}`;
 }
 
-export const EXPECTED_KEYS = ['id', 'kycLevel', 'kycStatus', 'kycHash'];
+export const EXPECTED_KEYS = ['id', 'state', 'kycLevel', 'kycStatus', 'kycHash'];
 
 export const FORBIDDEN_KEYS = [
   'mail',
@@ -76,5 +74,15 @@ export function assertUserShape(user) {
     if (Object.prototype.hasOwnProperty.call(user, key)) {
       throw new Error(`forbidden key present: ${key}`);
     }
+  }
+  if (!STATES.includes(user.state)) {
+    throw new Error(`invalid state: ${user.state}`);
+  }
+  if (user.state === 'ok') {
+    if (user.kycLevel == null || user.kycStatus == null || user.kycHash == null) {
+      throw new Error('ok status missing kyc fields');
+    }
+  } else if (user.kycLevel != null || user.kycStatus != null || user.kycHash != null) {
+    throw new Error(`${user.state} must not include kyc payload`);
   }
 }

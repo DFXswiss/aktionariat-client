@@ -1,55 +1,59 @@
 # DFX API — Aktionariat
 
-How Aktionariat calls DFX.
+How Aktionariat’s investor page talks to DFX for **RealUnit**.
 
-**Aktionariat** is the partner. **RealUnit** is one issuer on that platform (one DFX customer among others). Every DFX call that names an issuer must use the exact string `RealUnit`.
+| Who | Role |
+|-----|------|
+| Aktionariat | Unregulated partner. Hosts the investor page. **Must not perform KYC for RealUnit/DFX.** Reads **status only**. Does not receive or store the KYC dossier. |
+| RealUnit / DFX | Regulated. Own the KYC. Data flows **from DFX to Aktionariat**, never the other way. |
+| RealUnit | One issuer on Aktionariat (one DFX customer among others). |
 
-| Call | Field | Value |
-|------|--------|--------|
-| `POST /v1/auth/signUp` | JSON `wallet` | `"RealUnit"` |
-| `POST /v1/auth/signIn` | JSON `wallet` | `"RealUnit"` |
-| `GET /v2/kyc/client/aktionariat/users` | query `wallet` | `RealUnit` |
-| `GET /v2/kyc/client/aktionariat/users/:address` | query `wallet` | `RealUnit` |
+**Every DFX call that names an issuer must send the exact string `RealUnit`.**
 
-Never omit it. Never send `Aktionariat`, `DFX`, or an empty string.
+| Call | Where |
+|------|--------|
+| `POST /v1/auth/signUp` | JSON `"wallet": "RealUnit"` |
+| `POST /v1/auth/signIn` | JSON `"wallet": "RealUnit"` |
+| `GET /v2/kyc/client/aktionariat/users` | Query `wallet=RealUnit` |
+| `GET /v2/kyc/client/aktionariat/users/:address` | Query `wallet=RealUnit` |
 
-The two status GETs are specified here and implemented in [DFXswiss/backend#5429](https://github.com/DFXswiss/backend/pull/5429). They are not on production until that change is merged.
+Do not omit it. Do not send `Aktionariat` or `DFX`.
 
-There is no partner endpoint that starts KYC or returns a Sumsub link. Investors complete KYC on DFX. Aktionariat only reads status.
+Status routes ship with [DFXswiss/backend#5429](https://github.com/DFXswiss/backend/pull/5429) and are not on production until that merges.
 
 - Production: `https://api.dfx.swiss`
 - Swagger: [https://api.dfx.swiss/swagger](https://api.dfx.swiss/swagger)
-- JSON: `Content-Type: application/json`
-- Auth header: `Authorization: Bearer <accessToken>`
 
 ---
 
-## 1. Authenticate
+## What Aktionariat implements
 
-Aktionariat’s server signs in as a normal DFX **user** (wallet signature).
+1. **Check status** by investor address (§3).
+2. **Branch on `state`** (§3.3):
+   - `notStarted` — investor has no RealUnit KYC yet. Show DFX legal consent, then the **Sumsub widget**. There is **no** DFX endpoint that returns a start URL.
+   - `noConsent` — investor already has DFX KYC for something else, but not for this issuer. Same legal + Sumsub path for RealUnit (DFX does not reuse KYC collected by Aktionariat).
+   - `ok` — consent and ident are in place. Use `kycLevel` / `kycStatus` (restart if stale, block if rejected).
+3. **Never write KYC into Aktionariat.** The JSON below is status only.
 
-The operator address must:
+No `<dfx-services>` widget on the investor page. Identification is Sumsub. PEP/sanctions stay on DFX.
 
-1. Exist as a DFX user (`signUp` once, then `signIn`)
-2. Be listed on the DFX host in `AKTIONARIAT_KYC_READER_ADDRESSES` (comma-separated, case-insensitive; empty list means nobody)
-3. Belong to an active account
+---
 
-Do not use `GET /v1/auth/challenge`. That login is not part of this integration.
+## 1. Authenticate (Aktionariat server)
 
-### 1.1 Sign message
+The partner server signs in as a normal DFX **user**.
+
+The operator address must exist as a DFX user, be **active**, and be listed on the DFX host in `AKTIONARIAT_KYC_READER_ADDRESSES` (comma-separated, case-insensitive; empty = nobody).
+
+Do not call `GET /v1/auth/challenge`.
+
+### 1.1 Message
 
 ```http
 GET /v1/auth/signMessage?address=0xOperator
 ```
 
-```json
-{
-  "message": "By_signing_this_message,_you_confirm_that_you_are_the_sole_owner_of_the_provided_Blockchain_address._Your_ID:_0xOperator",
-  "blockchains": ["Ethereum"]
-}
-```
-
-Sign `message` as EIP-191 personal_sign (EOA). Non-production prefixes the string with `[dev]_` or `[loc]_`.
+Sign the returned `message` (EIP-191 personal_sign). Non-production prefixes `[dev]_` or `[loc]_`.
 
 ### 1.2 signUp (once)
 
@@ -65,9 +69,7 @@ POST /v1/auth/signUp
 }
 ```
 
-`wallet` is required for this integration. It is the issuer name.
-
-### 1.3 signIn (every session)
+### 1.3 signIn (each session)
 
 ```http
 POST /v1/auth/signIn
@@ -81,72 +83,74 @@ POST /v1/auth/signIn
 }
 ```
 
-Always send `wallet`. Response:
-
 ```json
 { "accessToken": "<jwt>" }
 ```
 
-Role `User`. Default lifetime two days. Store it as `DFX_ACCESS_TOKEN` for tests in this repo.
-
-| HTTP | Meaning |
-|------|---------|
-| 404 | No DFX user for this address → `signUp` |
-| 401 | Bad signature |
-
-Use the token:
+Role `User`, default lifetime two days. Tests: `DFX_ACCESS_TOKEN`.
 
 ```http
 Authorization: Bearer <accessToken>
 Accept: application/json
 ```
 
+| HTTP | Meaning |
+|------|---------|
+| 404 | No user yet → `signUp` |
+| 401 | Bad signature |
+
 ---
 
-## 2. Read KYC status
-
-Requires the JWT from §1 **and** `wallet=RealUnit`.
-
-The list is the investors of that issuer (DFX wallet named `RealUnit`), not the operator’s own KYC. The body is status only: no mail, name, street, phone, or trading limit.
-
-### 2.1 List
+## 2. List RealUnit investors
 
 ```http
 GET /v2/kyc/client/aktionariat/users?wallet=RealUnit
 Authorization: Bearer <accessToken>
 ```
 
-`200` — JSON array of §2.3.
+`200` — array of §3.3 objects for users on the RealUnit issuer wallet.
 
-### 2.2 One investor
+---
+
+## 3. Status by investor address
+
+This is the check Murat needs.
 
 ```http
 GET /v2/kyc/client/aktionariat/users/0xInvestor?wallet=RealUnit
 Authorization: Bearer <accessToken>
 ```
 
-Path `:address` is the investor wallet (case-insensitive). Encode it in the URL.
+Always `200` when auth succeeds (unknown address is `notStarted`, not `404`). Path `:address` is case-insensitive; URL-encode it.
 
-`200` — one object; `id` equals the path address.  
-`404` — that address is not an investor of issuer `RealUnit`.
+### 3.3 Object
 
-### 2.3 Object
+| Field | Type | When set |
+|-------|------|----------|
+| `id` | string | Always (investor address) |
+| `state` | string | Always: `notStarted` \| `noConsent` \| `ok` |
+| `kycLevel` | number or `null` | Set only when `state` is `ok`, otherwise `null` |
+| `kycStatus` | string or `null` | Set only when `state` is `ok` (`NA` \| `Light` \| `Full` \| `Rejected`; prefer `kycLevel`) |
+| `kycHash` | string or `null` | Set only when `state` is `ok`, otherwise `null` |
 
-| Field | Type | Meaning |
-|-------|------|---------|
-| `id` | string | Investor address |
-| `kycLevel` | number | `0` none, `10` contact, `20` personal, `30` ident, `40` financial, `50` DFX staff approval |
-| `kycStatus` | string | `NA` \| `Light` \| `Full` \| `Rejected` (legacy; prefer `kycLevel`) |
-| `kycHash` | string | KYC hash |
+`kycLevel`: `0` none, `10` contact, `20` personal, `30` ident, `40` financial, `50` DFX staff approval.
 
-### 2.4 Errors
+| `state` | Meaning for the investor page |
+|---------|-------------------------------|
+| `notStarted` | No RealUnit KYC. Legal consent, then Sumsub. |
+| `noConsent` | DFX KYC exists for another product, not this issuer. Legal + Sumsub for RealUnit. |
+| `ok` | Status may be used. |
+
+No mail, name, street, phone, or trading limit.
+
+### 3.4 Errors (auth / query)
 
 | HTTP | When |
 |------|------|
-| 400 | `wallet` query missing or empty (`wallet is required`) |
+| 400 | `wallet` missing or empty (`wallet is required`) |
 | 401 | No `Authorization` |
-| 403 | Not a user JWT, inactive account, or operator address not allowlisted (`Address is not allowlisted`) |
-| 404 | Unknown issuer name, or investor not on that issuer |
+| 403 | Wrong JWT, inactive account, or operator not allowlisted (`Address is not allowlisted`) |
+| 404 | Only if `wallet` is not a known issuer name |
 
 ```bash
 TOKEN=…
@@ -159,7 +163,7 @@ curl -sS -H "Authorization: Bearer $TOKEN" \
 
 ---
 
-## 3. Tests
+## 4. Tests
 
 ```bash
 cp .env.example .env
@@ -168,6 +172,6 @@ cp .env.example .env
 npm test
 ```
 
-Requests use `wallet=RealUnit`. Without `DFX_ACCESS_TOKEN` the suite skips.
+All status URLs include `wallet=RealUnit`. Without a token, tests skip.
 
 `DFX_API_URL` defaults to `https://api.dfx.swiss`.

@@ -40,24 +40,29 @@ describe('GET /v2/kyc/client/aktionariat/users?wallet=RealUnit', { skip: !live }
       assertUserShape(user);
     }
   });
+});
 
-  it('returns 404 for the zero address', async () => {
+describe('GET /v2/kyc/client/aktionariat/users/:address?wallet=RealUnit', { skip: !live }, () => {
+  it('returns 200 notStarted for an unused address', async () => {
     const res = await fetch(usersUrl(zeroAddress), { headers: authHeaders() });
-    assert.equal(res.status, 404);
+    if (res.status === 401 || res.status === 403) {
+      assert.fail(`auth rejected with ${res.status}`);
+    }
+    assert.equal(res.status, 200);
+    const user = await res.json();
+    assertUserShape(user);
+    assert.equal(user.state, 'notStarted');
   });
 });
 
-describe('GET /v2/kyc/client/aktionariat/users/:address?wallet=RealUnit', {
+describe('GET /v2/kyc/client/aktionariat/users/:address?wallet=RealUnit (known investor)', {
   skip: !live || !process.env.DFX_TEST_ADDRESS?.trim(),
 }, () => {
-  it('returns 200 with matching id or 404', async () => {
+  it('returns 200 with matching id', async () => {
     const address = process.env.DFX_TEST_ADDRESS.trim();
     const res = await fetch(usersUrl(address), { headers: authHeaders() });
     if (res.status === 401 || res.status === 403) {
       assert.fail(`auth rejected with ${res.status}`);
-    }
-    if (res.status === 404) {
-      return;
     }
     assert.equal(res.status, 200);
     const user = await res.json();
