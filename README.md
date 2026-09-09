@@ -1,30 +1,26 @@
 # aktionariat-client
 
-Partner tests and API notes for DFX RealUnit / Aktionariat.
+DFX API notes and tests for **Aktionariat**. RealUnit is one issuer on that platform.
 
-**How to get a JWT and how to call each RealUnit / KYC-client endpoint:** see **[docs/API.md](docs/API.md)**.
+**Every DFX call must pass `RealUnit` as the issuer** (`wallet` in JSON or `?wallet=RealUnit`). See **[docs/API.md](docs/API.md)**.
 
-This repo does not implement a KYC-start client.
+This repo does not start KYC. It only reads status.
 
-Endpoints under test (ship with [DFXswiss/backend#5429](https://github.com/DFXswiss/backend/pull/5429); not on production `develop` until that merges):
+Endpoints (ship with [DFXswiss/backend#5429](https://github.com/DFXswiss/backend/pull/5429); not on production `develop` until that merges):
 
-- `GET /v2/kyc/client/aktionariat/users`
-- `GET /v2/kyc/client/aktionariat/users/:address`
+- `GET /v2/kyc/client/aktionariat/users?wallet=RealUnit`
+- `GET /v2/kyc/client/aktionariat/users/:address?wallet=RealUnit`
 
-Auth is a normal **user** JWT (Bearer). The caller address must be on the API env `AKTIONARIAT_KYC_READER_ADDRESSES`. Company JWT is not accepted.
+Auth: user JWT of an address on `AKTIONARIAT_KYC_READER_ADDRESSES`. Login body must include `"wallet": "RealUnit"`.
 
 ## Setup
 
 1. Copy `.env.example` to `.env`.
-2. Set `DFX_ACCESS_TOKEN` from a **user** sign-in of an allowlisted address:
-   - `GET /v1/auth/signMessage?address=...`
-   - `POST /v1/auth/signIn`
-3. Optionally set `DFX_TEST_ADDRESS` to exercise the single-user GET.
+2. `GET /v1/auth/signMessage?address=...` then `POST /v1/auth/signIn` with `"wallet": "RealUnit"`. Put the token in `DFX_ACCESS_TOKEN`.
+3. Optionally set `DFX_TEST_ADDRESS`.
 4. Do not commit `.env`.
 
-Without `DFX_ACCESS_TOKEN`, `npm test` skips — there is nothing to assert without a live call.
-
-## Run
+Without `DFX_ACCESS_TOKEN`, `npm test` skips.
 
 ```bash
 npm test
@@ -34,13 +30,9 @@ Requires Node.js 20+.
 
 ## Response fields
 
-Each user object exposes:
-
-| Field       | Meaning                          |
-|-------------|----------------------------------|
-| `id`        | Wallet address                   |
-| `kycLevel`  | KYC level                        |
-| `kycStatus` | KYC status                       |
-| `kycHash`   | KYC hash                         |
-
-No dossier or document fields are returned on this surface.
+| Field       | Meaning        |
+|-------------|----------------|
+| `id`        | Wallet address |
+| `kycLevel`  | KYC level      |
+| `kycStatus` | KYC status     |
+| `kycHash`   | KYC hash       |
