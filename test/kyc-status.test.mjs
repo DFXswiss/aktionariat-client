@@ -43,7 +43,7 @@ describe('GET /v2/kyc/client/aktionariat/users?wallet=RealUnit', { skip: !live }
 });
 
 describe('GET /v2/kyc/client/aktionariat/users/:address?wallet=RealUnit', { skip: !live }, () => {
-  it('returns 200 notStarted for an unused address', async () => {
+  it('returns 200 NotStarted for an unused address', async () => {
     const res = await fetch(usersUrl(zeroAddress), { headers: authHeaders() });
     if (res.status === 401 || res.status === 403) {
       assert.fail(`auth rejected with ${res.status}`);
@@ -51,7 +51,7 @@ describe('GET /v2/kyc/client/aktionariat/users/:address?wallet=RealUnit', { skip
     assert.equal(res.status, 200);
     const user = await res.json();
     assertUserShape(user);
-    assert.equal(user.state, 'notStarted');
+    assert.equal(user.state, 'NotStarted');
   });
 });
 

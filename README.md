@@ -12,7 +12,7 @@ GET  /v2/kyc/client/aktionariat/users?wallet=RealUnit
 GET  /v2/kyc/client/aktionariat/users/:address?wallet=RealUnit
 ```
 
-Status `state`: `notStarted` | `noConsent` | `ok`. After `notStarted` / `noConsent`: DFX legal consent, then the Sumsub widget (no start-URL API).
+Status `state`: `NotStarted` | `NoConsent` | `Ok`. After `NotStarted` / `NoConsent`: DFX legal consent, then the Sumsub widget (no start-URL API).
 
 Routes: [DFXswiss/backend#5429](https://github.com/DFXswiss/backend/pull/5429) (not on production until merged).
 

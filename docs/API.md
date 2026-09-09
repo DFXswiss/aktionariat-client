@@ -30,9 +30,9 @@ Status routes ship with [DFXswiss/backend#5429](https://github.com/DFXswiss/back
 
 1. **Check status** by investor address (§3).
 2. **Branch on `state`** (§3.3):
-   - `notStarted` — investor has no RealUnit KYC yet. Show DFX legal consent, then the **Sumsub widget**. There is **no** DFX endpoint that returns a start URL.
-   - `noConsent` — investor already has DFX KYC for something else, but not for this issuer. Same legal + Sumsub path for RealUnit (DFX does not reuse KYC collected by Aktionariat).
-   - `ok` — consent and ident are in place. Use `kycLevel` / `kycStatus` (restart if stale, block if rejected).
+   - `NotStarted` — investor has no RealUnit KYC yet. Show DFX legal consent, then the **Sumsub widget**. There is **no** DFX endpoint that returns a start URL.
+   - `NoConsent` — investor already has DFX KYC for something else, but not for this issuer. Same legal + Sumsub path for RealUnit (DFX does not reuse KYC collected by Aktionariat).
+   - `Ok` — consent and ident are in place. Use `kycLevel` / `kycStatus` (restart if stale, block if rejected).
 3. **Never write KYC into Aktionariat.** The JSON below is status only.
 
 No `<dfx-services>` widget on the investor page. Identification is Sumsub. PEP/sanctions stay on DFX.
@@ -121,25 +121,25 @@ GET /v2/kyc/client/aktionariat/users/0xInvestor?wallet=RealUnit
 Authorization: Bearer <accessToken>
 ```
 
-Always `200` when auth succeeds (unknown address is `notStarted`, not `404`). Path `:address` is case-insensitive; URL-encode it.
+Always `200` when auth succeeds (unknown address is `NotStarted`, not `404`). Path `:address` is case-insensitive; URL-encode it.
 
 ### 3.3 Object
 
 | Field | Type | When set |
 |-------|------|----------|
 | `id` | string | Always (investor address) |
-| `state` | string | Always: `notStarted` \| `noConsent` \| `ok` |
-| `kycLevel` | number or `null` | Set only when `state` is `ok`, otherwise `null` |
-| `kycStatus` | string or `null` | Set only when `state` is `ok` (`NA` \| `Light` \| `Full` \| `Rejected`; prefer `kycLevel`) |
-| `kycHash` | string or `null` | Set only when `state` is `ok`, otherwise `null` |
+| `state` | string | Always: `NotStarted` \| `NoConsent` \| `Ok` |
+| `kycLevel` | number or `null` | Set only when `state` is `Ok`, otherwise `null` |
+| `kycStatus` | string or `null` | Set only when `state` is `Ok` (`NA` \| `Light` \| `Full` \| `Rejected`; prefer `kycLevel`) |
+| `kycHash` | string or `null` | Set only when `state` is `Ok`, otherwise `null` |
 
 `kycLevel`: `0` none, `10` contact, `20` personal, `30` ident, `40` financial, `50` DFX staff approval.
 
 | `state` | Meaning for the investor page |
 |---------|-------------------------------|
-| `notStarted` | No RealUnit KYC. Legal consent, then Sumsub. |
-| `noConsent` | DFX KYC exists for another product, not this issuer. Legal + Sumsub for RealUnit. |
-| `ok` | Status may be used. |
+| `NotStarted` | No RealUnit KYC. Legal consent, then Sumsub. |
+| `NoConsent` | DFX KYC exists for another product, not this issuer. Legal + Sumsub for RealUnit. |
+| `Ok` | Status may be used. |
 
 No mail, name, street, phone, or trading limit.
 
@@ -147,7 +147,7 @@ No mail, name, street, phone, or trading limit.
 
 | HTTP | When |
 |------|------|
-| 400 | `wallet` missing or empty (`wallet is required`) |
+| 400 | `wallet` missing or empty (`Wallet is required`) |
 | 401 | No `Authorization` |
 | 403 | Wrong JWT, inactive account, or operator not allowlisted (`Address is not allowlisted`) |
 | 404 | Only if `wallet` is not a known issuer name |

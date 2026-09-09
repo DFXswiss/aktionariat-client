@@ -6,7 +6,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 export const ISSUER = 'RealUnit';
 
-export const STATES = ['notStarted', 'noConsent', 'ok'];
+export const STATES = ['NotStarted', 'NoConsent', 'Ok'];
 
 export function loadEnv() {
   const path = resolve(root, '.env');
