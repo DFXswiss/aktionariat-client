@@ -144,7 +144,7 @@ No mail, name, street, phone, or trading limit.
 
 | HTTP | When |
 |------|------|
-| 400 | `wallet` missing or empty (`Wallet is required`) |
+| 400 | `wallet` missing/empty (`Wallet is required`) or not `RealUnit` (`Wallet must be RealUnit`) |
 | 401 | No `Authorization` |
 | 403 | Wrong JWT, inactive account, or operator not allowlisted (`Address is not allowlisted`) |
 | 404 | Only if `wallet` is not a known issuer name |
