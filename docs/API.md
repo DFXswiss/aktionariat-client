@@ -32,7 +32,7 @@ Status routes ship with [DFXswiss/backend#5429](https://github.com/DFXswiss/back
 2. **Branch on `state`** (§3.3):
    - `NotStarted` — no RealUnit KYC for this address. Show DFX legal consent, then the **Sumsub widget**. There is **no** DFX endpoint that returns a start URL.
    - `NoConsent` — not inferred from other DFX products. `wallet=RealUnit` looks only at RealUnit users.
-   - `Ok` — RealUnit ident is in place. Use `kycLevel` / `kycStatus` (restart if stale, block if rejected).
+   - `Ok` — RealUnit ident is in place.
 3. **Never write KYC into Aktionariat.** The JSON below is status only.
 
 No `<dfx-services>` widget on the investor page. Identification is Sumsub. PEP/sanctions stay on DFX.
@@ -129,17 +129,14 @@ Always `200` when auth succeeds (unknown address is `NotStarted`, not `404`). Pa
 |-------|------|----------|
 | `id` | string | Always (investor address) |
 | `state` | string | Always: `NotStarted` \| `NoConsent` \| `Ok` |
-| `kycLevel` | number or `null` | Set only when `state` is `Ok`, otherwise `null` |
-| `kycStatus` | string or `null` | Set only when `state` is `Ok` (`NA` \| `Light` \| `Full` \| `Rejected`; prefer `kycLevel`) |
-| `kycHash` | string or `null` | Set only when `state` is `Ok`, otherwise `null` |
 
-`kycLevel`: `0` none, `10` contact, `20` personal, `30` ident, `40` financial, `50` DFX staff approval.
+No `kycLevel`. That is a DFX-internal scale and is not part of this contract.
 
 | `state` | Meaning for the investor page |
 |---------|-------------------------------|
 | `NotStarted` | Not a RealUnit user, or RealUnit user without ident. Legal consent, then Sumsub. |
 | `NoConsent` | Not returned from other issuers’ KYC. This call only reads the RealUnit wallet. |
-| `Ok` | RealUnit KYC may be used. |
+| `Ok` | RealUnit ident is in place. |
 
 No mail, name, street, phone, or trading limit.
 

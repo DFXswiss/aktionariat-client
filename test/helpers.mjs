@@ -52,9 +52,12 @@ export function usersUrl(address) {
   return `${path}?wallet=${encodeURIComponent(ISSUER)}`;
 }
 
-export const EXPECTED_KEYS = ['id', 'state', 'kycLevel', 'kycStatus', 'kycHash'];
+export const EXPECTED_KEYS = ['id', 'state'];
 
 export const FORBIDDEN_KEYS = [
+  'kycLevel',
+  'kycStatus',
+  'kycHash',
   'mail',
   'firstName',
   'lastName',
@@ -77,12 +80,5 @@ export function assertUserShape(user) {
   }
   if (!STATES.includes(user.state)) {
     throw new Error(`invalid state: ${user.state}`);
-  }
-  if (user.state === 'ok') {
-    if (user.kycLevel == null || user.kycStatus == null || user.kycHash == null) {
-      throw new Error('ok status missing kyc fields');
-    }
-  } else if (user.kycLevel != null || user.kycStatus != null || user.kycHash != null) {
-    throw new Error(`${user.state} must not include kyc payload`);
   }
 }
