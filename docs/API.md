@@ -19,7 +19,7 @@ How Aktionariat’s investor page talks to DFX for **RealUnit**.
 
 Do not omit it. Do not send `Aktionariat` or `DFX`.
 
-Status routes from [DFXswiss/backend#5429](https://github.com/DFXswiss/backend/pull/5429) are live on production and development.
+Status routes are live on production and development.
 
 - Production: `https://api.dfx.swiss` (no sign-message prefix)
 - Development: `https://dev.api.dfx.swiss` (sign-message prefix `[dev]_`)
