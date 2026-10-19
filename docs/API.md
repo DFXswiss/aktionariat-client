@@ -31,7 +31,7 @@ Status routes ship with [DFXswiss/backend#5429](https://github.com/DFXswiss/back
 1. **Check status** by investor address (§3).
 2. **Branch on `state`** (§3.3):
    - `NotStarted` — ident is neither completed nor rejected, the address is unknown, or the address is on another DFX wallet that has not consented to Aktionariat as a KYC client. That other wallet stays `NotStarted` until consent, even when its ident was rejected or completed. Includes `url`; send the browser there. No Sumsub widget and no consent of your own.
-   - `NoConsent` — ident was rejected on the RealUnit wallet, or on another DFX wallet after that account has consented to Aktionariat. No `url`. Block the investor and send nobody to a URL. Without that consent the address stays `NotStarted`. Not other issuers’ KYC.
+   - `NoConsent` — ident was rejected on the RealUnit wallet, or on another DFX wallet after that account has consented to Aktionariat. No `url`. Block the investor and send nobody to a URL. Without that consent the address stays `NotStarted`.
    - `Ok` — ident completed. No `url`.
 3. **Never write KYC into Aktionariat.** The JSON below is status only.
 
