@@ -30,8 +30,8 @@ Status routes ship with [DFXswiss/backend#5429](https://github.com/DFXswiss/back
 
 1. **Check status** by investor address (§3).
 2. **Branch on `state`** (§3.3):
-   - `NotStarted` — no completed RealUnit ident, or another DFX wallet that has not consented to Aktionariat as a KYC client. Includes `url`; send the browser there. No Sumsub widget and no consent of your own.
-   - `NoConsent` — ident was rejected. No `url`. Block the investor and send nobody to a URL. Not other issuers’ KYC.
+   - `NotStarted` — ident is neither completed nor rejected, the address is unknown, or the address is on another DFX wallet that has not consented to Aktionariat as a KYC client. That other wallet stays `NotStarted` until consent, even when its ident was rejected or completed. Includes `url`; send the browser there. No Sumsub widget and no consent of your own.
+   - `NoConsent` — ident was rejected on the RealUnit wallet, or on another DFX wallet after that account has consented to Aktionariat. No `url`. Block the investor and send nobody to a URL. Without that consent the address stays `NotStarted`. Not other issuers’ KYC.
    - `Ok` — ident completed. No `url`.
 3. **Never write KYC into Aktionariat.** The JSON below is status only.
 
@@ -137,8 +137,8 @@ No `kycLevel`. That is a DFX-internal scale and is not part of this contract.
 
 | `state` | Meaning for the investor page |
 |---------|-------------------------------|
-| `NotStarted` | No completed RealUnit ident, or the address is on another DFX wallet and has not consented to Aktionariat as a KYC client. Open `url`: that page takes the wallet signature, the consent, and Sumsub. Do not show a Sumsub widget or your own consent. An unknown address stays `NotStarted` (not 404) and therefore has `url`. |
-| `NoConsent` | Ident was rejected. Block the investor and send nobody to `url`. There is no `url`. |
+| `NotStarted` | Ident is neither completed nor rejected, the address is unknown, or the address is on another DFX wallet and has not consented to Aktionariat as a KYC client. That other wallet stays `NotStarted` until consent, even when its ident was rejected or completed. Open `url`: that page takes the wallet signature, the consent, and Sumsub. Do not show a Sumsub widget or your own consent. An unknown address stays `NotStarted` (not 404) and therefore has `url`. |
+| `NoConsent` | Ident was rejected on the RealUnit wallet, or on another DFX wallet after that account has consented to Aktionariat. Block the investor and send nobody to `url`. There is no `url`. Without that consent the address stays `NotStarted`. |
 | `Ok` | Ident completed. No `url`. A RealUnit account with completed ident is `Ok` even without a separate consent step. An account on another wallet is `Ok` only after it has consented to Aktionariat and ident is completed. |
 
 `NotStarted`:
