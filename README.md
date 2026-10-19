@@ -12,7 +12,7 @@ GET  /v2/kyc/client/aktionariat/users?wallet=RealUnit
 GET  /v2/kyc/client/aktionariat/users/:address?wallet=RealUnit
 ```
 
-Status `state` is RealUnit-only: `NotStarted` (no ident) | `NoConsent` (ident rejected) | `Ok` (ident completed). After `NotStarted`: DFX legal consent, then the Sumsub widget (no start-URL API). Other issuers’ KYC is ignored.
+Status `state`: `NotStarted` (has `url`; send the browser there, with no Sumsub widget and no consent of your own) | `NoConsent` (ident rejected; no `url`) | `Ok` (ident completed; no `url`). An address on another DFX wallet stays `NotStarted` until that account has consented to Aktionariat; after that, the same three states apply.
 
 Routes: [DFXswiss/backend#5429](https://github.com/DFXswiss/backend/pull/5429) (not on production until merged).
 
