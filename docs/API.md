@@ -30,9 +30,9 @@ Status routes ship with [DFXswiss/backend#5429](https://github.com/DFXswiss/back
 
 1. **Check status** by investor address (§3).
 2. **Branch on `state`** (§3.3):
-   - `NotStarted` — no RealUnit ident yet. Show DFX legal consent, then the **Sumsub widget**. There is **no** DFX endpoint that returns a start URL.
-   - `NoConsent` — RealUnit ident was rejected. Not other issuers’ KYC.
-   - `Ok` — RealUnit ident completed.
+   - `NotStarted` — ident is neither completed nor rejected, the address is unknown, or the address is on another DFX wallet that has not consented to Aktionariat as a KYC client. That other wallet stays `NotStarted` until consent, even when its ident was rejected or completed. Includes `url`; send the browser there. No Sumsub widget and no consent of your own.
+   - `NoConsent` — ident was rejected on the RealUnit wallet, or on another DFX wallet after that account has consented to Aktionariat. No `url`. Block the investor and send nobody to a URL. Without that consent the address stays `NotStarted`.
+   - `Ok` — ident completed. No `url`.
 3. **Never write KYC into Aktionariat.** The JSON below is status only.
 
 No `<dfx-services>` widget on the investor page. Identification is Sumsub. PEP/sanctions stay on DFX.
@@ -121,7 +121,7 @@ GET /v2/kyc/client/aktionariat/users/0xInvestor?wallet=RealUnit
 Authorization: Bearer <accessToken>
 ```
 
-Always `200` when auth succeeds (unknown address is `NotStarted`, not `404`). Path `:address` is case-insensitive; URL-encode it.
+Always `200` when auth succeeds (unknown address is `NotStarted`, not `404`, and includes `url`). Path `:address` is case-insensitive; URL-encode it.
 
 ### 3.3 Object
 
@@ -129,14 +129,45 @@ Always `200` when auth succeeds (unknown address is `NotStarted`, not `404`). Pa
 |-------|------|----------|
 | `id` | string | Always (investor address) |
 | `state` | string | Always: `NotStarted` \| `NoConsent` \| `Ok` |
+| `url` | string | Only when `state` is `NotStarted`. Absent for `Ok` and `NoConsent` (not `null`, not an empty string). |
 
 No `kycLevel`. That is a DFX-internal scale and is not part of this contract.
 
+`url` is the DFX KYC page. The API chooses the host by environment; Aktionariat does not. Production: `https://app.dfx.swiss/kyc`. Development: `https://dev.app.dfx.swiss/kyc`. Query, in this order: `wallet=RealUnit`, `client=Aktionariat`, `address=<investor address>`. The address is the same value as `id`. The `url` from the API does not contain `kyc-redirect`. Aktionariat appends `kyc-redirect` itself, and only when the redirect target is `https` and the host is exactly `shares.realunit.ch`. DFX rejects any other host. Do not add any other query parameter.
+
 | `state` | Meaning for the investor page |
 |---------|-------------------------------|
-| `NotStarted` | Not a RealUnit user, or RealUnit user without ident. Legal consent, then Sumsub. |
-| `NoConsent` | RealUnit ident was rejected. |
-| `Ok` | RealUnit ident completed. |
+| `NotStarted` | Ident is neither completed nor rejected, the address is unknown, or the address is on another DFX wallet and has not consented to Aktionariat as a KYC client. That other wallet stays `NotStarted` until consent, even when its ident was rejected or completed. Open `url`: that page takes the wallet signature, the consent, and Sumsub. Do not show a Sumsub widget or your own consent. An unknown address stays `NotStarted` (not 404) and therefore has `url`. |
+| `NoConsent` | Ident was rejected on the RealUnit wallet, or on another DFX wallet after that account has consented to Aktionariat. Block the investor and send nobody to `url`. There is no `url`. Without that consent the address stays `NotStarted`. |
+| `Ok` | Ident completed. No `url`. A RealUnit account with completed ident is `Ok` even without a separate consent step. An account on another wallet is `Ok` only after it has consented to Aktionariat and ident is completed. |
+
+`NotStarted`:
+
+```json
+{
+  "id": "0xInvestor",
+  "state": "NotStarted",
+  "url": "https://app.dfx.swiss/kyc?wallet=RealUnit&client=Aktionariat&address=0xInvestor"
+}
+```
+
+`NoConsent`:
+
+```json
+{
+  "id": "0xInvestor",
+  "state": "NoConsent"
+}
+```
+
+`Ok`:
+
+```json
+{
+  "id": "0xInvestor",
+  "state": "Ok"
+}
+```
 
 No mail, name, street, phone, or trading limit.
 
