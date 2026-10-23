@@ -19,7 +19,7 @@ How Aktionariat’s investor page talks to DFX for **RealUnit**.
 
 Do not omit it. Do not send `Aktionariat` or `DFX`.
 
-Status routes ship with [DFXswiss/backend#5429](https://github.com/DFXswiss/backend/pull/5429) and are not on production until that merges.
+The status routes are on production.
 
 - Production: `https://api.dfx.swiss`
 - Swagger: [https://api.dfx.swiss/swagger](https://api.dfx.swiss/swagger)
@@ -178,7 +178,7 @@ No mail, name, street, phone, or trading limit.
 | 400 | `wallet` missing/empty (`Wallet is required`) or not `RealUnit` (`Wallet must be RealUnit`) |
 | 401 | No `Authorization` |
 | 403 | Wrong JWT, inactive account, or operator not allowlisted (`Address is not allowlisted`) |
-| 404 | Only if `wallet` is not a known issuer name |
+| 404 | The RealUnit wallet record is missing (`Wallet not found`) |
 
 ```bash
 TOKEN=…
